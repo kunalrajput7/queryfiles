@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+pypdf2
+transformers
+torch
+sentence-transformers
+faiss-cpu
+protobuf
+sentencepeice
+bitsandbytes
+accelerate>=0.26.0
+python-multipart
+google-cloud-storage
+uuid
