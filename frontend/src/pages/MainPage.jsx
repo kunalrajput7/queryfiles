@@ -28,9 +28,22 @@ const MainPage = () => {
     setSidebarOpen(!sidebarOpen);
   };
 
-  // Dummy handler for PDF upload; integrate real logic later
-  const handlePdfUpload = () => {
-    setPdfUploaded(true);
+  // Updated PDF upload handler
+  const handlePdfUpload = async (file) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    try {
+      const response = await fetch("http://127.0.0.1:8000/upload_pdf", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+      console.log("Upload response:", data);
+      // Set state based on successful upload, or update further if needed
+      setPdfUploaded(true);
+    } catch (error) {
+      console.error("Upload error:", error);
+    }
   };
 
   return (
@@ -52,7 +65,10 @@ const MainPage = () => {
         }}
       >
         <div style={styles.centerContent}>
-          <UploadSection onOpenSidebar={toggleSidebar} onUploadPdf={handlePdfUpload} />
+          <UploadSection 
+            onOpenSidebar={toggleSidebar} 
+            onUploadPdf={handlePdfUpload} 
+          />
         </div>
         <div style={styles.chatWrapper}>
           <ChatInput disabled={!pdfUploaded} />
@@ -105,7 +121,7 @@ const styles = {
     width: "100vw",
     height: "100vh",
     background: "rgba(0, 0, 0, 0.5)",
-    zIndex: 998, // Ensure it's below the sidebar (which has zIndex 999)
+    zIndex: 998,
   },
 };
 

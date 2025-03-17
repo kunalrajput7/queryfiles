@@ -1,5 +1,8 @@
 // src/components/Navbar.jsx
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+import { signOut } from "firebase/auth";
+import { auth } from "../firebaseConfig"; // Adjust path if needed
 import logo from "../assets/logo.png";
 import userIcon from "../assets/user.png";
 
@@ -17,6 +20,40 @@ const useMobile = () => {
 
 const Navbar = ({ toggleSidebar }) => {
   const isMobile = useMobile();
+  const [showLogout, setShowLogout] = useState(false);
+  const logoutRef = useRef(null);
+  const navigate = useNavigate();
+
+  // Toggle logout box when user icon is clicked
+  const handleUserIconClick = () => {
+    setShowLogout((prev) => !prev);
+  };
+
+  // Logout function: sign out and navigate to login
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      navigate("/login");
+    } catch (err) {
+      console.error("Error signing out:", err);
+    }
+  };
+
+  // Close logout box when clicking outside of it
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (logoutRef.current && !logoutRef.current.contains(event.target)) {
+        setShowLogout(false);
+      }
+    };
+    if (showLogout) {
+      document.addEventListener("mousedown", handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [showLogout]);
+
   return (
     <nav style={styles.nav}>
       <div style={styles.left}>
@@ -29,7 +66,21 @@ const Navbar = ({ toggleSidebar }) => {
             ☰
           </button>
         ) : (
-          <img src={userIcon} alt="User" style={styles.userIcon} />
+          <div style={styles.userContainer}>
+            <img
+              src={userIcon}
+              alt="User"
+              style={styles.userIcon}
+              onClick={handleUserIconClick}
+            />
+            {showLogout && (
+              <div style={styles.logoutBox} ref={logoutRef}>
+                <span style={styles.logoutText} onClick={handleLogout}>
+                  Logout
+                </span>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </nav>
@@ -65,11 +116,29 @@ const styles = {
   right: {
     display: "flex",
     alignItems: "center",
+    position: "relative",
+  },
+  userContainer: {
+    position: "relative",
+    cursor: "pointer",
   },
   userIcon: {
     padding: 5,
     height: "30px",
     width: "30px",
+  },
+  logoutBox: {
+    position: "absolute",
+    top: "40px", // Below the user icon
+    right: 0,
+    backgroundColor: "rgba(0, 0, 0, 0.7)",
+    padding: "8px 12px",
+    borderRadius: "4px",
+    zIndex: 1001,
+  },
+  logoutText: {
+    color: "#fff",
+    cursor: "pointer",
   },
   sidebarButton: {
     background: "transparent",
