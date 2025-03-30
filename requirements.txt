@@ -12,3 +12,5 @@ accelerate>=0.26.0
 python-multipart
 google-cloud-storage
 uuid
+PyMuPDF
+pdfplumber

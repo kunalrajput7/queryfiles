@@ -35,6 +35,7 @@ const styles = {
     borderRadius: "5px",
     cursor: "pointer",
     zIndex: 1000,
+    outline: "none",
   },
 };
 

@@ -6,6 +6,7 @@ import { auth } from "/src/firebaseConfig";
 import Login from "/src/authentication/Login";
 import Signup from "/src/authentication/Signup";
 import MainPage from "/src/pages/MainPage";
+import AuthPage from "./authentication/authpage";
 
 function App() {
   const [user, setUser] = useState(null);
@@ -21,9 +22,10 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} />
-        <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} />
-        <Route path="/" element={user ? <MainPage /> : <Navigate to="/login" />} />
+        {/* <Route path="/login" element={!user ? <Login /> : <Navigate to="/" />} /> */}
+        {/* <Route path="/signup" element={!user ? <Signup /> : <Navigate to="/" />} /> */}
+        <Route path="/authpage" element={!user ? <AuthPage /> : <Navigate to="/" />} />
+        <Route path="/" element={user ? <MainPage /> : <Navigate to="/authpage" />} />
       </Routes>
     </Router>
   );

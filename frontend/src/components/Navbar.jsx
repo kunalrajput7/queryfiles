@@ -2,34 +2,30 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
-import { auth } from "../firebaseConfig"; // Adjust path if needed
+import { auth } from "../firebaseConfig";
 import logo from "../assets/logo.png";
 import userIcon from "../assets/user.png";
 
 const useMobile = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   useEffect(() => {
-    const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
   return isMobile;
 };
 
-const Navbar = ({ toggleSidebar }) => {
+const Navbar = ({ toggleSidebar, sidebarOpen }) => {
   const isMobile = useMobile();
   const [showLogout, setShowLogout] = useState(false);
   const logoutRef = useRef(null);
   const navigate = useNavigate();
 
-  // Toggle logout box when user icon is clicked
   const handleUserIconClick = () => {
     setShowLogout((prev) => !prev);
   };
 
-  // Logout function: sign out and navigate to login
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -39,7 +35,6 @@ const Navbar = ({ toggleSidebar }) => {
     }
   };
 
-  // Close logout box when clicking outside of it
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (logoutRef.current && !logoutRef.current.contains(event.target)) {
@@ -49,14 +44,12 @@ const Navbar = ({ toggleSidebar }) => {
     if (showLogout) {
       document.addEventListener("mousedown", handleClickOutside);
     }
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [showLogout]);
 
   return (
     <nav style={styles.nav}>
-      <div style={styles.left}>
+      <div style={{ ...styles.left, ...(sidebarOpen ? styles.hidden : {}) }}>
         <img src={logo} alt="Logo" style={styles.logo} />
         <span style={styles.title}>SmartPDF</span>
       </div>
@@ -104,12 +97,15 @@ const styles = {
     display: "flex",
     alignItems: "center",
   },
+  hidden: {
+    visibility: "hidden", // Hide logo and title when sidebar is open (mobile or desktop)
+  },
   logo: {
-    height: "40px",
+    height: "30px",
     marginRight: "10px",
   },
   title: {
-    fontSize: "24px",
+    fontSize: "20px",
     fontWeight: "bold",
     color: "#fff",
   },
@@ -124,12 +120,12 @@ const styles = {
   },
   userIcon: {
     padding: 5,
-    height: "30px",
-    width: "30px",
+    height: "26px",
+    width: "26px",
   },
   logoutBox: {
     position: "absolute",
-    top: "40px", // Below the user icon
+    top: "40px",
     right: 0,
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     padding: "8px 12px",
@@ -146,6 +142,7 @@ const styles = {
     color: "#fff",
     fontSize: "24px",
     cursor: "pointer",
+    outline: "none",
   },
 };
 
