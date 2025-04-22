@@ -1,6 +1,6 @@
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import AutoModelForCausalLM, AutoTokenizer
 from sentence_transformers import SentenceTransformer
 from google.cloud import storage, firestore
 import faiss
@@ -29,41 +29,47 @@ storage_client = storage.Client()
 bucket = storage_client.bucket(BUCKET_NAME)
 firestore_client = firestore.Client()
 
-print(f"CUDA available: {torch.cuda.is_available()}")
-print(f"GPU: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'None'}")
+# Device detection
+device = (
+    "cuda" if torch.cuda.is_available() else 
+    "mps" if torch.backends.mps.is_available() else 
+    "cpu"
+)
+print(f"Using device: {device}")
+if device == "cuda":
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+elif device == "mps":
+    print("Running on Apple Silicon MPS")
 
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
+embedder = SentenceTransformer("all-MiniLM-L6-v2", device=device)
 print("Warming up embedder...")
 embedder.encode(["Warm-up query"], convert_to_numpy=True)
 print("Embedder warmed up.")
 
+# Chat history to improve context-awareness
+chat_history = {}
+
 active_indices = {}
 active_chunks_dict = {}
 
-MODEL_NAME = "TinyLlama/TinyLlama-1.1B-Chat-v1.0"
-USE_QUANTIZATION = torch.cuda.is_available() and torch.cuda.get_device_properties(0).total_memory < 6e9
+MODEL_NAME = "mistralai/Mistral-7B-Instruct-v0.2"  # Your chosen model
 
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
 
 model_kwargs = {
     "pretrained_model_name_or_path": MODEL_NAME,
-    "device_map": "auto",
-    "torch_dtype": torch.float16,
-    "low_cpu_mem_usage": True
+    "torch_dtype": torch.float16,  # FP16 to reduce memory usage
+    "low_cpu_mem_usage": True,     # Optimize CPU memory during loading
 }
-if USE_QUANTIZATION:
-    quant_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_use_double_quant=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.float16
-    )
-    model_kwargs["quantization_config"] = quant_config
 
-model = AutoModelForCausalLM.from_pretrained(**model_kwargs)
-print(f"Model {MODEL_NAME} loaded successfully.")
+# Load model directly onto MPS without offloading
+model = AutoModelForCausalLM.from_pretrained(**model_kwargs).to(device)
+print(f"Model {MODEL_NAME} loaded successfully on {device}.")
 print("Warming up model...")
-dummy_input = tokenizer("Context:\nWarm-up context\n\nQuestion: Warm-up query\nAnswer:", return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
+dummy_input = tokenizer(
+    "<|system|>You are a helpful PDF chatbot.<|user|>Warm-up query<|assistant|>Warm-up response",
+    return_tensors="pt"
+).to(device)
 model.generate(**dummy_input, max_new_tokens=20)
 print("Model warmed up.")
 
@@ -83,7 +89,7 @@ def extract_text_from_pdf(file_path):
         doc = fitz.open(file_path)
         text = ""
         for page in doc:
-            text += page.get_text("text")  # "text" mode for natural reading order
+            text += page.get_text("text")
         doc.close()
         if not text.strip():
             raise ValueError("No extractable text found in the PDF.")
@@ -142,7 +148,7 @@ def save_file_metadata(uid, pdf_name, pdf_gcs_path, index_gcs_path, chunks_gcs_p
         doc_ref = firestore_client.collection("users").document(uid).collection("files").document(fileid)
         doc_ref.set(file_data)
         print(f"File metadata saved for {uid} under file id {fileid}")
-        return fileid  # Return fileid for frontend use
+        return fileid
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error saving metadata to Firestore: {str(e)}")
 
@@ -167,7 +173,6 @@ async def upload_pdf(file: UploadFile = File(...), uid: str = Form(None)):
             "uid": uid,
             "id": fileid,
             "filename": pdf_name,
-            # Remove upload_date or use a placeholder (Firestore handles the actual timestamp)
         }
     except HTTPException as e:
         raise e
@@ -237,18 +242,32 @@ async def query_pdf(query: str = Form(...), uid: str = Form(...)):
         context = "\n".join([chunks[idx] for idx in indices[0] if idx < len(chunks)])
         print(f"Context building time: {time.time() - t3:.2f}s")
 
+        # Add chat history for context-awareness
+        if uid not in chat_history:
+            chat_history[uid] = []
+        history_str = "\n".join([f"User: {q}\nAssistant: {r}" for q, r in chat_history[uid][-5:]])  # Last 5 exchanges
+
         t4 = time.time()
-        prompt = f"Context:\n{context}\n\nQuestion: {query}\nAnswer:"
-        inputs = tokenizer(prompt, return_tensors="pt").to("cuda" if torch.cuda.is_available() else "cpu")
+        prompt = f"""<|system|>You are a helpful PDF chatbot. Provide clear, organized answers with bullet points for lists, proper punctuation, and a friendly tone.
+
+Chat History:
+{history_str}
+
+Context:
+{context}
+
+Question: {query}<|user|>"""
+        inputs = tokenizer(prompt, return_tensors="pt").to(device)
         print(f"Tokenization time: {time.time() - t4:.2f}s")
 
         t5 = time.time()
         outputs = model.generate(
             **inputs,
-            max_new_tokens=20,
+            max_new_tokens=200,  # Increased for detailed responses
             do_sample=True,
             temperature=0.7,
-            top_p=0.9
+            top_p=0.9,
+            pad_token_id=tokenizer.eos_token_id,  # Avoid padding warnings
         )
         print(f"Generation time: {time.time() - t5:.2f}s")
 
@@ -257,8 +276,10 @@ async def query_pdf(query: str = Form(...), uid: str = Form(...)):
         print(f"Decoding time: {time.time() - t6:.2f}s")
 
         t7 = time.time()
-        if output_text.startswith(prompt):
-            output_text = output_text[len(prompt):].strip()
+        # Clean up output to remove prompt and system tags
+        if "<|system|>" in output_text:
+            output_text = output_text.split("<|user|>")[1].strip()
+        chat_history[uid].append((query, output_text))
         print(f"Post-processing time: {time.time() - t7:.2f}s")
 
         total_time = time.time() - start_time
