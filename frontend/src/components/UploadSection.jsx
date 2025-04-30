@@ -1,4 +1,3 @@
-// src/components/UploadSection.jsx
 import React, { useState } from "react";
 
 const UploadSection = ({ onOpenSidebar, onUploadPdf }) => {
@@ -19,14 +18,38 @@ const UploadSection = ({ onOpenSidebar, onUploadPdf }) => {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      onUploadPdf(e.dataTransfer.files[0]);
+      const file = e.dataTransfer.files[0];
+      if (validateFile(file)) {
+        onUploadPdf(file);
+      }
     }
   };
 
   const handleFileChange = (e) => {
     if (e.target.files && e.target.files[0]) {
-      onUploadPdf(e.target.files[0]);
+      const file = e.target.files[0];
+      if (validateFile(file)) {
+        onUploadPdf(file);
+      }
     }
+  };
+
+  const validateFile = (file) => {
+    const allowedTypes = [".pdf", ".docx", ".xlsx", ".xls"];
+    const maxSize = 50 * 1024 * 1024; // 50MB
+    const extension = file.name.slice(file.name.lastIndexOf(".")).toLowerCase();
+    
+    if (!allowedTypes.includes(extension)) {
+      alert("Only PDF, Word (.docx), and Excel (.xlsx, .xls) files are allowed.");
+      return false;
+    }
+    
+    if (file.size > maxSize) {
+      alert("File size exceeds 50MB limit.");
+      return false;
+    }
+    
+    return true;
   };
 
   return (
@@ -41,7 +64,7 @@ const UploadSection = ({ onOpenSidebar, onUploadPdf }) => {
       onDrop={handleDrop}
     >
       <h2>Hello! How can I help you today?</h2>
-      <p>Upload a new file to get started or open sidebar to continue with previous files.</p>
+      <p>Upload a new PDF, Word, or Excel file to get started or open sidebar to continue with previous files.</p>
       <div style={styles.buttonContainer}>
         <button style={styles.button} onClick={onOpenSidebar}>
           Open Sidebar
@@ -50,14 +73,14 @@ const UploadSection = ({ onOpenSidebar, onUploadPdf }) => {
           style={styles.button}
           onClick={() => document.getElementById("hiddenFileInput").click()}
         >
-          Upload PDF
+          Upload File
         </button>
       </div>
       <input
         type="file"
         id="hiddenFileInput"
         style={{ display: "none" }}
-        accept="application/pdf"
+        accept=".pdf,.docx,.xlsx,.xls"
         onChange={handleFileChange}
       />
     </div>

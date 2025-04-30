@@ -15,7 +15,7 @@ const useMobile = () => {
 
 const SidebarToggleButton = ({ toggleSidebar }) => {
   const isMobile = useMobile();
-  if (isMobile) return null; // Don't render the button on mobile
+  if (isMobile) return null;
   return (
     <button style={styles.button} onClick={toggleSidebar}>
       ☰
@@ -28,8 +28,8 @@ const styles = {
     position: "absolute",
     bottom: "20px",
     left: "20px",
-    background: "rgba(128, 128, 128, 0.5)",
-    border: "none",
+    background: "rgba(50,51,50,255)",
+    border: "1px solid rgba(255, 255, 255, 0.2)",
     padding: "10px 15px",
     color: "#fff",
     borderRadius: "5px",

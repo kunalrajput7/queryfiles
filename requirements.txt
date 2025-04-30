@@ -14,3 +14,11 @@ google-cloud-storage
 uuid
 PyMuPDF
 pdfplumber
+react-router-dom
+react-markdown
+react-doc-viewer 
+pytesseract 
+pdf2image 
+python-docx 
+openpyxl
+google-cloud-vision

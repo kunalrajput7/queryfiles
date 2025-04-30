@@ -1,16 +1,21 @@
-// src/pages/MainPage.jsx
 import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebaseConfig";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy } from "firebase/firestore";
+import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, getDoc, doc } from "firebase/firestore";
 import { getApp } from "firebase/app";
+import ReactMarkdown from "react-markdown";
+import rehypeSanitize from "rehype-sanitize";
 import Navbar from "../components/Navbar";
 import UploadSection from "../components/UploadSection";
 import Sidebar from "../components/Sidebar";
 import ChatInput from "../components/ChatInput";
 import SidebarToggleButton from "../components/SidebarToggleButton";
-import loadingGif from "../assets/loading.gif";
-import typingGif from "../assets/typing.gif"; // New import for typing animation
+import loadingGif from "../assets/response_loading.gif";
+import typingGif from "../assets/typing.gif";
+
+// Base URL for API calls (update for deployment)
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 const db = getFirestore(getApp());
 
@@ -31,15 +36,52 @@ const MainPage = () => {
   const [chatHistory, setChatHistory] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [isRestoring, setIsRestoring] = useState(true);
+  const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const lastLoadedFileId = useRef(null);
   const [chatInputHeight, setChatInputHeight] = useState(46);
   const chatAreaRef = useRef(null);
   const chatWrapperRef = useRef(null);
+  const pendingNavigation = useRef(null); // Track pending navigation
   const isMobile = useMobile();
+  const { fileId } = useParams();
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => setCurrentUser(user));
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setCurrentUser(user);
+    });
     return () => unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!currentUser?.uid) {
+      setIsRestoring(false);
+      return;
+    }
+
+    if (fileId && lastLoadedFileId.current !== fileId && !pendingNavigation.current) {
+      const fetchFile = async () => {
+        try {
+          const fileDoc = await getDoc(doc(db, "users", currentUser.uid, "files", fileId));
+          if (fileDoc.exists()) {
+            const fileData = { id: fileDoc.id, ...fileDoc.data() };
+            console.log(`useEffect: Loading file ${fileId}`);
+            await handleSelectPdf(fileData, false);
+          } else {
+            console.log(`useEffect: File ${fileId} not found, redirecting`);
+            navigate("/");
+          }
+        } catch (error) {
+          console.error("useEffect: Error fetching file:", error);
+          navigate("/");
+        }
+      };
+      fetchFile();
+    } else {
+      setIsRestoring(false);
+    }
+  }, [currentUser, fileId, navigate]); // Removed isLoadingFile from dependencies
 
   useEffect(() => {
     if (chatAreaRef.current) {
@@ -103,11 +145,14 @@ const MainPage = () => {
       formData.append("uid", currentUser.uid);
     }
     try {
-      const response = await fetch("http://127.0.0.1:8000/upload_pdf", {
+      const response = await fetch(`${API_BASE_URL}/upload_pdf`, {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error(`Upload failed with status: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Upload failed with status: ${response.status}`);
+      }
       const data = await response.json();
       console.log("Upload response:", data);
 
@@ -120,39 +165,69 @@ const MainPage = () => {
       await handleSelectPdf(uploadedFile);
     } catch (error) {
       console.error("Upload error:", error);
-      setChatHistory([{ type: "model", text: "Error uploading PDF.", timestamp: new Date().toISOString() }]);
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "model", text: `Error uploading file: ${error.message}`, timestamp: new Date().toISOString() },
+      ]);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const handleSelectPdf = async (file) => {
+  const handleSelectPdf = async (file, shouldNavigate = true) => {
     if (!currentUser?.uid) return;
+    if (isLoadingFile || lastLoadedFileId.current === file.id) {
+      console.log(`handleSelectPdf: Skipped for file ${file.id} (already loading or loaded)`);
+      return;
+    }
+    setIsLoadingFile(true);
+    console.log(`handleSelectPdf: Loading file ${file.id}`);
     const formData = new FormData();
     formData.append("uid", currentUser.uid);
     formData.append("fileid", file.id);
     try {
-      const response = await fetch("http://127.0.0.1:8000/load_index", {
+      if (shouldNavigate) {
+        pendingNavigation.current = file.id; // Set pending navigation
+        console.log(`handleSelectPdf: Setting pending navigation to ${file.id}`);
+      }
+      const response = await fetch(`${API_BASE_URL}/load_index`, {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error(`Failed to load index with status: ${response.status}`);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Failed to load index with status: ${response.status}`);
+      }
       const data = await response.json();
       console.log("Load index response:", data);
       if (!data.error) {
         setActiveFile(file);
-        setIsLoading(false);
+        lastLoadedFileId.current = file.id;
+        if (shouldNavigate) {
+          console.log(`handleSelectPdf: Navigating to /chat/${file.id}`);
+          navigate(`/chat/${file.id}`);
+        }
       } else {
         throw new Error(data.error);
       }
     } catch (error) {
       console.error("Load index error:", error);
-      setChatHistory([{ type: "model", text: "Error loading PDF data.", timestamp: new Date().toISOString() }]);
+      setChatHistory((prev) => [
+        ...prev,
+        { type: "model", text: `Error loading file data: ${error.message}`, timestamp: new Date().toISOString() },
+      ]);
+      navigate("/");
+    } finally {
+      setIsLoadingFile(false);
+      pendingNavigation.current = null; // Clear pending navigation
+      setIsRestoring(false);
     }
   };
 
   const handleNewChat = () => {
     setActiveFile(null);
+    lastLoadedFileId.current = null;
+    navigate("/");
   };
 
   const handleSendMessage = async (message) => {
@@ -179,11 +254,14 @@ const MainPage = () => {
       const formData = new FormData();
       formData.append("query", message);
       formData.append("uid", currentUser.uid);
-      const response = await fetch("http://127.0.0.1:8000/query", {
+      const response = await fetch(`${API_BASE_URL}/query`, {
         method: "POST",
         body: formData,
       });
-      if (!response.ok) throw new Error("Query failed");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.detail || `Query failed with status: ${response.status}`);
+      }
       const data = await response.json();
 
       const modelMessage = {
@@ -194,6 +272,11 @@ const MainPage = () => {
       await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), modelMessage);
     } catch (error) {
       console.error("Query error:", error);
+      let errorText = "Error: Failed to connect to server.";
+      if (error.message.includes("DeepSeek API error")) {
+        // eslint-disable-next-line no-unused-vars
+        errorText = "Error: API request limit reached or server issue. Please try again later.";
+      }
       const errorMessage = {
         type: "model",
         text: "Error: Failed to connect to server.",
@@ -205,6 +288,14 @@ const MainPage = () => {
     }
   };
 
+  if (isRestoring) {
+    return (
+      <div style={styles.centerContent}>
+        <img src={loadingGif} alt="Loading..." style={styles.loadingGif} />
+      </div>
+    );
+  }
+
   return (
     <div style={styles.container}>
       <Navbar toggleSidebar={toggleSidebar} sidebarOpen={sidebarOpen} />
@@ -214,6 +305,7 @@ const MainPage = () => {
         uid={currentUser?.uid}
         onSelectPdf={handleSelectPdf}
         onNewChat={handleNewChat}
+        activeFile={activeFile}
       />
       {isMobile && sidebarOpen && <div style={styles.backdrop} onClick={toggleSidebar} />}
 
@@ -221,7 +313,7 @@ const MainPage = () => {
         style={{
           ...styles.content,
           transform: !isMobile && sidebarOpen ? "translateX(50px)" : "translateX(0)",
-          transition: "transform",
+          transition: "transform 0.3s ease-in-out",
         }}
       >
         {!activeFile && !isUploading && (
@@ -242,8 +334,18 @@ const MainPage = () => {
               ...styles.chatArea,
               top: isMobile ? "60px" : "0",
               bottom: `${chatInputHeight + 20}px`,
-              scrollbarWidth: "none",
-              "::-webkit-scrollbar": { display: "none" },
+              scrollbarWidth: "thin",
+              scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
+              "::-webkit-scrollbar": {
+                width: "6px",
+              },
+              "::-webkit-scrollbar-track": {
+                background: "transparent",
+              },
+              "::-webkit-scrollbar-thumb": {
+                background: "rgba(255, 255, 255, 0.1)",
+                borderRadius: "3px",
+              },
             }}
             ref={chatAreaRef}
           >
@@ -257,7 +359,13 @@ const MainPage = () => {
                       animation: "slideUp 0.3s ease-out",
                     }}
                   >
-                    {msg.text}
+                    {msg.type === "model" ? (
+                      <div style={styles.markdown}>
+                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.text}</ReactMarkdown>
+                      </div>
+                    ) : (
+                      msg.text
+                    )}
                   </div>
                 ))}
                 {isLoading && (
@@ -310,8 +418,7 @@ const styles = {
     height: "100vh",
     overflowX: "hidden",
     overflowY: "auto",
-    background: "linear-gradient(135deg, #1a1a1a, #121212)",
-    backgroundImage: "radial-gradient(circle at center, rgba(0, 123, 255, 0.3), transparent 70%)",
+    background: "	rgba(24,24,25,255)",
     boxSizing: "border-box",
   },
   content: {
@@ -319,6 +426,7 @@ const styles = {
     width: "100%",
     height: "100%",
     boxSizing: "border-box",
+    transition: "transform 0.3s ease-in-out",
   },
   centerContent: {
     position: "absolute",
@@ -367,7 +475,7 @@ const styles = {
     justifyContent: "flex-end",
   },
   userMessage: {
-    background: "rgba(0, 123, 255, 0.7)",
+    background: "rgba(255, 255, 255, 0.1)",
     borderRadius: "10px",
     padding: "10px",
     marginBottom: "20px",
@@ -387,6 +495,51 @@ const styles = {
     clear: "both",
     boxSizing: "border-box",
   },
+  markdown: {
+    color: "#fff",
+    lineHeight: "1.5",
+    "& h1, & h2, & h3": {
+      margin: "10px 0",
+      fontWeight: "bold",
+    },
+    "& h1": {
+      fontSize: "1.5em",
+    },
+    "& h2": {
+      fontSize: "1.3em",
+    },
+    "& h3": {
+      fontSize: "1.1em",
+    },
+    "& p": {
+      margin: "8px 0",
+    },
+    "& ul, & ol": {
+      margin: "8px 0",
+      paddingLeft: "20px",
+    },
+    "& li": {
+      margin: "4px 0",
+    },
+    "& strong": {
+      fontWeight: "bold",
+    },
+    "& em": {
+      fontStyle: "italic",
+    },
+    "& code": {
+      background: "rgba(255, 255, 255, 0.1)",
+      padding: "2px 4px",
+      borderRadius: "4px",
+      fontFamily: "monospace",
+    },
+    "& pre": {
+      background: "rgba(255, 255, 255, 0.1)",
+      padding: "10px",
+      borderRadius: "4px",
+      overflowX: "auto",
+    },
+  },
   loading: {
     padding: "10px",
     margin: "5px 0 5px 20px",
@@ -398,20 +551,12 @@ const styles = {
     clear: "both",
     boxSizing: "border-box",
   },
-  spinner: { // Kept for reference, but no longer used
-    width: "20px",
-    height: "20px",
-    border: "3px solid #888",
-    borderTop: "3px solid #fff",
-    borderRadius: "50%",
-    animation: "spin 1s linear infinite",
-  },
   loadingGif: {
     width: "100px",
     height: "100px",
   },
   typingGif: {
-    width: "50px", // Adjusted size for chat area, tweak as needed
+    width: "50px",
     height: "50px",
     padding: "0px",
     margin: "0px",

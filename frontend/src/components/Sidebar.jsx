@@ -1,14 +1,21 @@
-// src/components/Sidebar.jsx
 import React, { useState, useEffect, useRef } from "react";
 import userIcon from "../assets/user.png";
 import logo from "../assets/logo.png";
-import { getFirestore, collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  query,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
 import { getApp } from "firebase/app";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import { auth } from "../firebaseConfig";
+import { FaTrash } from "react-icons/fa";
 
 const db = getFirestore(getApp());
+const API_BASE_URL = "http://127.0.0.1:8000";
 
 const useMobile = () => {
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -22,11 +29,11 @@ const useMobile = () => {
 
 const groupFilesByDate = (files) => {
   const grouped = {
-    "Today": [],
-    "Yesterday": [],
+    Today: [],
+    Yesterday: [],
     "Last 7 Days": [],
     "Last 30 Days": [],
-    "Earlier": [],
+    Earlier: [],
   };
 
   const now = new Date();
@@ -44,10 +51,18 @@ const groupFilesByDate = (files) => {
   return grouped;
 };
 
-const Sidebar = ({ open, toggleSidebar, uid, onSelectPdf, onNewChat }) => {
+const Sidebar = ({
+  open,
+  toggleSidebar,
+  uid,
+  onSelectPdf,
+  onNewChat,
+  activeFile,
+}) => {
   const isMobile = useMobile();
   const [files, setFiles] = useState([]);
   const [showLogout, setShowLogout] = useState(false);
+  const [hoveredFileId, setHoveredFileId] = useState(null);
   const logoutRef = useRef(null);
   const navigate = useNavigate();
 
@@ -79,18 +94,11 @@ const Sidebar = ({ open, toggleSidebar, uid, onSelectPdf, onNewChat }) => {
 
   const groupedFiles = groupFilesByDate(files);
 
-  const dateFormatter = new Intl.DateTimeFormat("en-US", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "numeric",
-    hour12: true,
-  });
-
   const handlePdfClick = (file) => {
     onSelectPdf(file);
-    toggleSidebar();
+    if (isMobile) {
+      toggleSidebar(); // Close sidebar on file click in mobile view
+    }
   };
 
   const handleNewChatClick = () => {
@@ -111,6 +119,53 @@ const Sidebar = ({ open, toggleSidebar, uid, onSelectPdf, onNewChat }) => {
     }
   };
 
+  const handleDeleteFile = async (file) => {
+    if (!window.confirm("I want to Delete the file.")) return;
+
+    try {
+      const formData = new FormData();
+      formData.append("uid", uid);
+      formData.append("fileid", file.id);
+
+      const response = await fetch(`${API_BASE_URL}/delete_file`, {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(
+          errorData.detail ||
+            `Failed to delete file with status: ${response.status}`
+        );
+      }
+
+      console.log(`File ${file.id} deleted successfully`);
+
+      if (activeFile && activeFile.id === file.id) {
+        onNewChat(); // Redirect to main page if active file is deleted
+      }
+    } catch (error) {
+      console.error("Delete file error:", error);
+      alert(`Error deleting file: ${error.message}`);
+    }
+  };
+
+  const getFileIcon = (filename) => {
+    const extension = filename.slice(filename.lastIndexOf(".")).toLowerCase();
+    switch (extension) {
+      case ".pdf":
+        return "📄";
+      case ".docx":
+        return "📝";
+      case ".xlsx":
+      case ".xls":
+        return "📊";
+      default:
+        return "📄";
+    }
+  };
+
   return (
     <div
       style={{
@@ -123,35 +178,61 @@ const Sidebar = ({ open, toggleSidebar, uid, onSelectPdf, onNewChat }) => {
       <div style={styles.header}>
         <img src={logo} alt="Logo" style={styles.logo} />
         <span style={{ ...styles.title, fontSize: isMobile ? "22px" : "18px" }}>
-          SmartPDF
+          QueryFiles
         </span>
       </div>
       <div style={styles.newChatTile} onClick={handleNewChatClick}>
-        New Chat
+        New Document
       </div>
-      <h3 style={styles.pdfHeader}>History ⏳</h3>
       {uid ? (
-        Object.keys(groupedFiles).map((category) =>
-          groupedFiles[category].length > 0 && (
-            <div key={category}>
-              <h4 style={styles.categoryHeader}>{category}</h4>
-              <ul style={styles.fileList}>
-                {groupedFiles[category].map((file) => (
-                  <li
-                    key={file.id}
-                    style={styles.fileTile}
-                    onClick={() => handlePdfClick(file)}
-                  >
-                    {file.filename}
-                    <br />
-                    <span style={styles.dateText}>
-                      {dateFormatter.format(file.upload_date.toDate())}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )
+        Object.keys(groupedFiles).map(
+          (category) =>
+            groupedFiles[category].length > 0 && (
+              <div key={category}>
+                <h4 style={styles.categoryHeader}>{category}</h4>
+                <ul style={styles.fileList}>
+                  {groupedFiles[category].map((file) => (
+                    <li
+                      key={file.id}
+                      style={
+                        activeFile && file.id === activeFile.id
+                          ? styles.fileTile
+                          : styles.fileTileTransparent
+                      }
+                      onClick={() => handlePdfClick(file)}
+                      onMouseEnter={
+                        isMobile ? null : () => setHoveredFileId(file.id)
+                      }
+                      onMouseLeave={
+                        isMobile ? null : () => setHoveredFileId(null)
+                      }
+                    >
+                      <span style={styles.fileIcon}>
+                        {getFileIcon(file.filename)}
+                      </span>
+                      <span
+                        style={
+                          isMobile ? styles.fileTextMobile : styles.fileText
+                        }
+                      >
+                        {file.filename}
+                      </span>
+                      {(isMobile || hoveredFileId === file.id) && (
+                        <span
+                          style={styles.deleteIcon}
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent triggering handlePdfClick
+                            handleDeleteFile(file);
+                          }}
+                        >
+                          <FaTrash />
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )
         )
       ) : (
         <p style={styles.noUserText}>No user logged in.</p>
@@ -186,14 +267,26 @@ const styles = {
     top: 0,
     bottom: 0,
     left: 0,
-    width: "200px",
-    background: "rgba(0, 0, 0, 0.9)",
+    width: "230px",
+    background: "rgba(33,32,33,255)",
     padding: "10px",
     color: "#fff",
     overflowY: "auto",
-    scrollbarWidth: "none",
-    "::-webkit-scrollbar": { display: "none" },
+    scrollbarWidth: "thin",
+    scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
+    "::-webkit-scrollbar": {
+      width: "6px",
+    },
+    "::-webkit-scrollbar-track": {
+      background: "transparent",
+    },
+    "::-webkit-scrollbar-thumb": {
+      background: "rgba(255, 255, 255, 0.1)",
+      borderRadius: "3px",
+    },
     zIndex: 999,
+    borderTopRightRadius: "12px",
+    borderBottomRightRadius: "12px",
   },
   header: {
     display: "flex",
@@ -210,7 +303,7 @@ const styles = {
     fontWeight: "bold",
   },
   newChatTile: {
-    background: "rgba(0, 123, 255, 0.7)", // Blue tint to stand out
+    background: "rgba(255, 255, 255, 0.1)",
     padding: "6px",
     borderRadius: "4px",
     marginBottom: "10px",
@@ -230,19 +323,60 @@ const styles = {
   },
   fileList: {
     listStyleType: "none",
-    padding: 0,
+    padding: "0px",
   },
   fileTile: {
     background: "rgba(255, 255, 255, 0.1)",
-    padding: "6px",
-    borderRadius: "4px",
+    padding: "8px",
+    borderRadius: "6px",
     marginBottom: "6px",
     cursor: "pointer",
     fontSize: "13px",
+    display: "flex",
+    alignItems: "center",
+    position: "relative",
   },
-  dateText: {
-    fontSize: "10px",
-    color: "#ccc",
+  fileTileTransparent: {
+    background: "transparent",
+    padding: "8px",
+    marginBottom: "6px",
+    cursor: "pointer",
+    fontSize: "13px",
+    transition: "background 0.2s ease",
+    display: "flex",
+    alignItems: "center",
+    position: "relative",
+    ":hover": {
+      background: "rgba(255, 255, 255, 0.1)",
+    },
+  },
+  fileIcon: {
+    marginRight: "6px",
+    fontSize: "1.2em",
+    flexShrink: 0,
+  },
+  fileText: {
+    display: "block",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    flex: 1,
+  },
+  fileTextMobile: {
+    display: "block",
+    whiteSpace: "nowrap",
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    flex: 1,
+    maxWidth: "120px", // Shorter text in mobile view to accommodate delete icon
+  },
+  deleteIcon: {
+    color: "#fff",
+    marginLeft: "10px",
+    cursor: "pointer",
+    fontSize: "1em",
+    flexShrink: 0,
+    zIndex: 1000, // Ensure icon is on top
   },
   noUserText: {
     fontSize: "12px",
@@ -273,7 +407,7 @@ const styles = {
     backgroundColor: "rgba(0, 0, 0, 0.7)",
     padding: "8px 12px",
     borderRadius: "4px",
-    zIndex: 1001,
+    zIndex: 100,
   },
   logoutText: {
     color: "#fff",

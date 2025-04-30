@@ -1,0 +1,50 @@
+# Node.js / Frontend
+node_modules/
+dist/
+build/
+.env
+*.env
+.env.local
+.env.development
+.env.production
+.vite/
+
+# Python / Backend
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.venv/
+pip-selfcheck.json
+
+# Sensitive Files
+gcs_key.json
+firebaseConfig.js
+*.pem
+*.key
+*.cert
+*.json  # Be cautious, only if all JSON files are sensitive
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# Logs and Temporary Files
+*.log
+*.log.*
+*.tmp
+*.bak
+*.swp
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# Build Artifacts
+*.zip
+*.tar.gz
