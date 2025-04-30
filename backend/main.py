@@ -18,7 +18,10 @@ import xlrd
 from firebase_admin import auth
 from firebase_admin import credentials
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
+# Load environment variables
+load_dotenv()
 
 class UIDRequest(BaseModel):
     uid: str
@@ -33,12 +36,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../gcs_key.json"
-BUCKET_NAME = "pdf-faiss-bucket"
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-caa811add2ff4ee683ec33aba69fa270")  # Set in environment
-cred = credentials.Certificate("../gcs_key.json")
+# Environment variables
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
+BUCKET_NAME = os.getenv("BUCKET_NAME")
+GCS_KEY_PATH = os.getenv("GCS_KEY_PATH")
+FIREBASE_STORAGE_BUCKET = os.getenv("FIREBASE_STORAGE_BUCKET")
+
+# Set GCS credentials
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = GCS_KEY_PATH
+
+# Initialize Firebase
+cred = credentials.Certificate(GCS_KEY_PATH)
 firebase_admin.initialize_app(cred, {
-    "storageBucket": "pdf-faiss-bucket"
+    "storageBucket": FIREBASE_STORAGE_BUCKET
 })
 
 storage_client = storage.Client()

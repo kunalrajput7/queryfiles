@@ -28,6 +28,7 @@ firebaseConfig.jsx
 *.key
 *.cert
 *.json  # Be cautious, only if all JSON files are sensitive
+frontend/.env
 
 # IDEs and Editors
 .vscode/
