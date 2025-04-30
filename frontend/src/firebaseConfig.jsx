@@ -2,15 +2,14 @@
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
 
-
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT
+    apiKey: "AIzaSyAKWQ07i9TN1Q8K4n6pz5UsWF_jF7AP5c4",
+    authDomain: "ml-pdf-chatbot.firebaseapp.com",
+    projectId: "ml-pdf-chatbot",
+    storageBucket: "ml-pdf-chatbot.firebasestorage.app",
+    messagingSenderId: "496291856445",
+    appId: "1:496291856445:web:5047f3783fb8b6430f6a54",
+    measurementId: "G-MF12RMYCBR"
   };
 
 const app = initializeApp(firebaseConfig);

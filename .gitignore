@@ -23,6 +23,7 @@ pip-selfcheck.json
 # Sensitive Files
 gcs_key.json
 firebaseConfig.js
+firebaseConfig.jsx
 *.pem
 *.key
 *.cert

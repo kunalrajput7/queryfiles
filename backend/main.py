@@ -18,32 +18,27 @@ import xlrd
 from firebase_admin import auth
 from firebase_admin import credentials
 from pydantic import BaseModel
-from dotenv import load_dotenv
 
-
-# Load .env file
-load_dotenv()
 
 class UIDRequest(BaseModel):
     uid: str
 
 app = FastAPI()
 
-# Configure CORS
-CORS_ORIGINS = os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=CORS_ORIGINS,
+    allow_origins=["http://localhost:5173", "https://<your-vercel-domain>.vercel.app"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-BUCKET_NAME = os.getenv("BUCKET_NAME")
-DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY")
-cred = credentials.Certificate(os.getenv("GOOGLE_APPLICATION_CREDENTIALS"))
+os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = "../gcs_key.json"
+BUCKET_NAME = "pdf-faiss-bucket"
+DEEPSEEK_API_KEY = os.getenv("DEEPSEEK_API_KEY", "sk-caa811add2ff4ee683ec33aba69fa270")  # Set in environment
+cred = credentials.Certificate("../gcs_key.json")
 firebase_admin.initialize_app(cred, {
-    "storageBucket": BUCKET_NAME
+    "storageBucket": "pdf-faiss-bucket"
 })
 
 storage_client = storage.Client()
