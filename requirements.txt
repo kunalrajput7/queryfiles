@@ -22,3 +22,4 @@ pdf2image
 python-docx 
 openpyxl
 google-cloud-vision
+python-env==1.0.1
