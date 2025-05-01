@@ -1,16 +1,16 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "../firebaseConfig";
+import { auth } from "../firebaseConfig.jsx";
 import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, getDoc, doc } from "firebase/firestore";
 import { getApp } from "firebase/app";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
-import Navbar from "../components/Navbar";
-import UploadSection from "../components/UploadSection";
-import Sidebar from "../components/Sidebar";
-import ChatInput from "../components/ChatInput";
-import SidebarToggleButton from "../components/SidebarToggleButton";
+import Navbar from "../components/Navbar.jsx";
+import UploadSection from "../components/UploadSection.jsx";
+import Sidebar from "../components/Sidebar.jsx";
+import ChatInput from "../components/ChatInput.jsx";
+import SidebarToggleButton from "../components/SidebarToggleButton.jsx";
 import loadingGif from "../assets/response_loading.gif";
 import typingGif from "../assets/typing.gif";
 

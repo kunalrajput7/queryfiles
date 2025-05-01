@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
-import { auth } from "./firebaseConfig";
-import AuthPage from "/src/authentication/AuthPage";
-import MainPage from "./pages/MainPage";
+import { auth } from "./firebaseConfig.jsx";
+import AuthPage from "/src/authentication/AuthPage.jsx";
+import MainPage from "./pages/MainPage.jsx";
 
 function App() {
   const [user, setUser] = useState(null);

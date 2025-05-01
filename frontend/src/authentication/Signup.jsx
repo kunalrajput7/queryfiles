@@ -1,7 +1,7 @@
 // src/Signup.jsx
 import React, { useState } from "react";
 import { createUserWithEmailAndPassword } from "firebase/auth";
-import { auth } from "/src/firebaseConfig";
+import { auth } from "/src/firebaseConfig.jsx";
 import { useNavigate, Link } from "react-router-dom";
 
 const Signup = () => {
