@@ -1,8 +1,15 @@
 import React, { useState, useEffect } from "react";
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+} from "firebase/auth";
 import { auth } from "../firebaseConfig.jsx";
 import { useNavigate } from "react-router-dom";
-import { AiFillGithub, AiOutlineTwitter, AiFillInstagram } from "react-icons/ai";
+import {
+  AiFillGithub,
+  AiOutlineTwitter,
+  AiFillInstagram,
+} from "react-icons/ai";
 import { FaLinkedinIn } from "react-icons/fa";
 import { AbstractShapeBg } from "../assets/AbstractShapeBg.module.js";
 
@@ -30,8 +37,15 @@ const AuthPage = () => {
   useEffect(() => {
     const colorbg = new AbstractShapeBg({
       dom: "box",
-      colors: ["#1c1c1c", "#121212", "#242424", "#080808", "#2b2b2b", "#010101"],
-      loop: true
+      colors: [
+        "#1c1c1c",
+        "#121212",
+        "#242424",
+        "#080808",
+        "#2b2b2b",
+        "#010101",
+      ],
+      loop: true,
     });
     return () => colorbg.destroy?.();
   }, []);
@@ -109,7 +123,9 @@ const AuthPage = () => {
             </form>
           </div>
         </div>
-        <div style={isMobile ? styles.mobileFooterContent : styles.footerContent}>
+        <div
+          style={isMobile ? styles.mobileFooterContent : styles.footerContent}
+        >
           <div style={styles.footerText}>
             <p style={styles.footerTextP}>
               Designed and Developed by{" "}
@@ -141,7 +157,7 @@ const AuthPage = () => {
               <AiOutlineTwitter size={20} />
             </a>
             <a
-              href="https://www.linkedin.com/in/kunalrajput007/"
+              href="https://www.linkedin.com/in/kunalrajput1/"
               style={styles.socialIcon}
               target="_blank"
               rel="noopener noreferrer"
@@ -149,7 +165,7 @@ const AuthPage = () => {
               <FaLinkedinIn size={20} />
             </a>
             <a
-              href="https://www.instagram.com/kunaaaaall_"
+              href="https://www.instagram.com/kunalrajput555_"
               style={styles.socialIcon}
               target="_blank"
               rel="noopener noreferrer"
@@ -158,7 +174,7 @@ const AuthPage = () => {
             </a>
           </div>
           <div style={isMobile ? styles.mobileCopyright : styles.copyright}>
-            <p>Copyright © 2025</p>
+            <p>Copyright © {new Date().getFullYear()}</p>
           </div>
         </div>
       </div>

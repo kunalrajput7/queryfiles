@@ -93,7 +93,7 @@ const styles = {
     margin: "20px",
     padding: "20px",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
-    borderRadius: "10px",
+    borderRadius: "25px",
   },
   buttonContainer: {
     marginTop: "20px",
@@ -106,7 +106,7 @@ const styles = {
     border: "none",
     padding: "10px 20px",
     color: "#fff",
-    borderRadius: "5px",
+    borderRadius: "15px",
     cursor: "pointer",
   },
 };

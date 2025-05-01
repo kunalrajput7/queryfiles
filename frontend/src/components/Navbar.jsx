@@ -137,9 +137,8 @@ const Navbar = ({ toggleSidebar, sidebarOpen }) => {
         </button>
       </div>
     ) : (
-      <div style={styles.userContainer}>
+      <div style={isMobile? styles.userIcon : styles.userIconMobile}>
         <FaUserCircle
-          style={styles.userIconMobile}
           onClick={handleUserIconClick}
         />
         {showLogout && (
@@ -260,23 +259,27 @@ const styles = {
     alignItems: "center",
     position: "relative",
     paddingBottom: "20px",
-    // background: "grey",
   },
   userContainer: {
     position: "relative",
     cursor: "pointer",
+    
   },
   userIcon: {
     fontSize: "26px",
     color: "#fff",
     cursor: "pointer",
+    marginTop: "15px",
+    padding: "0px",
+
   },
   userIconMobile: {
-    paddingTop: "15px",
+    marginTop: "15px",
     marginRight: "20px",
     fontSize: "26px",
     color: "#fff",
     cursor: "pointer",
+    
   },
   logoutBox: {
     position: "absolute",
@@ -382,7 +385,7 @@ const styles = {
     border: "none",
     color: "#fff",
     padding: "5px 10px",
-    borderRadius: "4px",
+    borderRadius: "15px",
     cursor: "pointer",
     fontSize: "14px",
   },
@@ -395,8 +398,7 @@ const styles = {
     background: "rgba(255, 255, 255, 0.1)",
     border: "none",
     color: "#fff",
-    padding: "10px",
-    borderRadius: "4px",
+    borderRadius: "15px",
     cursor: "pointer",
     fontSize: "16px",
     textAlign: "center",

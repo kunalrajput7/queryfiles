@@ -368,7 +368,7 @@ const styles = {
     overflow: "hidden",
     textOverflow: "ellipsis",
     flex: 1,
-    maxWidth: "120px", // Shorter text in mobile view to accommodate delete icon
+    maxWidth: "100%", 
   },
   deleteIcon: {
     color: "#fff",
