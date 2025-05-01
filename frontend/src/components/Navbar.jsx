@@ -121,103 +121,104 @@ const Navbar = ({ toggleSidebar, sidebarOpen }) => {
 
   return (
     <nav style={styles.nav}>
-  <div style={{ ...styles.left, ...(sidebarOpen ? styles.hidden : {}) }}>
-    <img src={logo} alt="Logo" style={styles.logo} />
-    <span style={styles.title}>QueryFiles</span>
-  </div>
-  <div style={styles.right}>
-    {isMobile ? (
-      <div style={styles.buttonContainer}>
-        <FaUserCircle
-          style={styles.userIcon}
-          onClick={handleUserIconClick}
-        />
-        <button style={styles.sidebarButton} onClick={toggleSidebar}>
-          ☰
-        </button>
+      <div style={{ ...styles.left, ...(sidebarOpen ? styles.hidden : {}) }}>
+        <img src={logo} alt="Logo" style={styles.logo} />
+        <span style={styles.title}>QueryFiles</span>
       </div>
-    ) : (
-      <div style={isMobile? styles.userIcon : styles.userIconMobile}>
-        <FaUserCircle
-          onClick={handleUserIconClick}
-        />
-        {showLogout && (
-          <div style={styles.logoutBox} ref={logoutRef}>
-            <span style={styles.logoutText} onClick={handleLogout}>
-              Logout
-            </span>
+      <div style={styles.right}>
+        {isMobile ? (
+          <div style={styles.buttonContainer}>
+            <FaUserCircle
+              style={styles.userIcon}
+              onClick={handleUserIconClick}
+            />
+            <button style={styles.sidebarButton} onClick={toggleSidebar}>
+              ☰
+            </button>
+          </div>
+        ) : (
+          <div style={styles.userContainer}>
+            <FaUserCircle
+              style={styles.userIcon}
+              onClick={handleUserIconClick}
+            />
+            {showLogout && (
+              <div style={styles.logoutBox} ref={logoutRef}>
+                <span style={styles.logoutText} onClick={handleLogout}>
+                  Logout
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>
-    )}
-  </div>
 
-  {showUserInfo && (
-    <>
-      <div style={styles.backdrop} onClick={() => setShowUserInfo(false)} />
-      <div style={{ ...styles.userInfoBox, ...(isMobile ? styles.userInfoBoxMobile : {}) }} ref={userInfoRef}>
-        <div style={styles.header}>
-          <h2 style={{ ...styles.infoHeading, ...(isMobile ? { fontSize: "20px" } : {}) }}>Information</h2>
-          <button
-            style={styles.closeButton}
-            onClick={() => setShowUserInfo(false)}
-          >
-            <FaTimes />
-          </button>
-        </div>
-        <div style={styles.infoContent}>
-          <div style={{ ...styles.infoRow, ...(isMobile ? styles.infoRowMobile : {}) }}>
-            <span style={styles.infoLabel}>Email ID:</span>
-            <span style={styles.infoValue}>{auth.currentUser?.email || "N/A"}</span>
-          </div>
-          <div style={{ ...styles.infoRow, ...(isMobile ? styles.infoRowMobile : {}) }}>
-            <span style={styles.infoLabel}>Password:</span>
-            <div style={styles.infoValue}>
-              ********
+      {showUserInfo && (
+        <>
+          <div style={styles.backdrop} onClick={() => setShowUserInfo(false)} />
+          <div style={{ ...styles.userInfoBox, ...(isMobile ? styles.userInfoBoxMobile : {}) }} ref={userInfoRef}>
+            <div style={styles.header}>
+              <h2 style={{ ...styles.infoHeading, ...(isMobile ? { fontSize: "20px" } : {}) }}>Information</h2>
               <button
-                style={styles.inlineButton}
-                onClick={handleEditPassword}
+                style={styles.closeButton}
+                onClick={() => setShowUserInfo(false)}
               >
-                Edit Password
+                <FaTimes />
+              </button>
+            </div>
+            <div style={styles.infoContent}>
+              <div style={{ ...styles.infoRow, ...(isMobile ? styles.infoRowMobile : {}) }}>
+                <span style={styles.infoLabel}>Email ID:</span>
+                <span style={styles.infoValue}>{auth.currentUser?.email || "N/A"}</span>
+              </div>
+              <div style={{ ...styles.infoRow, ...(isMobile ? styles.infoRowMobile : {}) }}>
+                <span style={styles.infoLabel}>Password:</span>
+                <div style={styles.infoValue}>
+                  ********
+                  <button
+                    style={styles.inlineButton}
+                    onClick={handleEditPassword}
+                  >
+                    Edit Password
+                  </button>
+                </div>
+              </div>
+              <div style={{ ...styles.infoRow, ...(isMobile ? styles.infoRowMobile : {}) }}>
+                <span style={styles.infoLabel}>Theme:</span>
+                <div style={styles.infoValue}>
+                  <button
+                    style={styles.inlineButton}
+                    onClick={toggleTheme}
+                  >
+                    Switch to {theme === "dark" ? "Light" : "Dark"} Mode
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div style={styles.actionButtons}>
+              <button
+                style={styles.actionButton}
+                onClick={handleClearData}
+              >
+                Clear All Data
+              </button>
+              <button
+                style={styles.actionButton}
+                onClick={handleDeleteAccount}
+              >
+                Delete Account
+              </button>
+              <button
+                style={styles.logoutButton}
+                onClick={handleLogout}
+              >
+                Logout
               </button>
             </div>
           </div>
-          <div style={{ ...styles.infoRow, ...(isMobile ? styles.infoRowMobile : {}) }}>
-            <span style={styles.infoLabel}>Theme:</span>
-            <div style={styles.infoValue}>
-              <button
-                style={styles.inlineButton}
-                onClick={toggleTheme}
-              >
-                Switch to {theme === "dark" ? "Light" : "Dark"} Mode
-              </button>
-            </div>
-          </div>
-        </div>
-        <div style={styles.actionButtons}>
-          <button
-            style={styles.actionButton}
-            onClick={handleClearData}
-          >
-            Clear All Data
-          </button>
-          <button
-            style={styles.actionButton}
-            onClick={handleDeleteAccount}
-          >
-            Delete Account
-          </button>
-          <button
-            style={styles.actionButton}
-            onClick={handleLogout}
-          >
-            Logout
-          </button>
-        </div>
-      </div>
-    </>
-  )}
-</nav>
+        </>
+      )}
+    </nav>
   );
 };
 
@@ -226,7 +227,7 @@ const styles = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    // padding: "10px 20px",
+    padding: "10px 15px", // Uniform padding for mobile and desktop
     position: "absolute",
     top: 0,
     left: 0,
@@ -238,9 +239,6 @@ const styles = {
     display: "flex",
     alignItems: "center",
     gap: "10px",
-    marginBottom: "20px",
-    paddingLeft: "20px",
-    // background: "white",
   },
   hidden: {
     visibility: "hidden",
@@ -257,40 +255,19 @@ const styles = {
   right: {
     display: "flex",
     alignItems: "center",
-    position: "relative",
-    paddingBottom: "20px",
   },
   userContainer: {
     position: "relative",
     cursor: "pointer",
-    
+  },
+  buttonContainer: {
+    display: "flex",
+    alignItems: "center",
+    gap: "15px", // Space between user icon and sidebar button
+    paddingRight: "10px", // Right padding for balance
   },
   userIcon: {
     fontSize: "26px",
-    color: "#fff",
-    cursor: "pointer",
-    marginTop: "15px",
-    padding: "0px",
-
-  },
-  userIconMobile: {
-    marginTop: "15px",
-    marginRight: "20px",
-    fontSize: "26px",
-    color: "#fff",
-    cursor: "pointer",
-    
-  },
-  logoutBox: {
-    position: "absolute",
-    top: "40px",
-    right: 0,
-    backgroundColor: "rgba(0, 0, 0, 0.7)",
-    padding: "8px 12px",
-    borderRadius: "4px",
-    zIndex: 1001,
-  },
-  logoutText: {
     color: "#fff",
     cursor: "pointer",
   },
@@ -301,6 +278,21 @@ const styles = {
     fontSize: "24px",
     cursor: "pointer",
     outline: "none",
+    padding: "5px", // Padding for clickability
+  },
+  logoutBox: {
+    position: "absolute",
+    top: "100%",
+    right: 0,
+    background: "rgba(50,51,50,255)",
+    borderRadius: "8px",
+    padding: "10px",
+    color: "#fff",
+    zIndex: 1001,
+  },
+  logoutText: {
+    cursor: "pointer",
+    fontSize: "14px",
   },
   backdrop: {
     position: "fixed",
@@ -398,6 +390,15 @@ const styles = {
     background: "rgba(255, 255, 255, 0.1)",
     border: "none",
     color: "#fff",
+    borderRadius: "15px",
+    cursor: "pointer",
+    fontSize: "16px",
+    textAlign: "center",
+  },
+  logoutButton: {
+    background: "white",
+    border: "none",
+    color: "black",
     borderRadius: "15px",
     cursor: "pointer",
     fontSize: "16px",

@@ -94,6 +94,7 @@ const styles = {
     padding: "20px",
     backgroundColor: "rgba(255, 255, 255, 0.1)",
     borderRadius: "25px",
+    color: "white",
   },
   buttonContainer: {
     marginTop: "20px",
@@ -105,7 +106,7 @@ const styles = {
     backgroundColor: "rgba(128, 128, 128, 0.5)",
     border: "none",
     padding: "10px 20px",
-    color: "#fff",
+    color: "white",
     borderRadius: "15px",
     cursor: "pointer",
   },

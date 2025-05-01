@@ -13,10 +13,12 @@ import ChatInput from "../components/ChatInput.jsx";
 import SidebarToggleButton from "../components/SidebarToggleButton.jsx";
 import loadingGif from "../assets/response_loading.gif";
 import typingGif from "../assets/typing.gif";
+import pdfLogo from "../assets/pdf.png";
+import wordLogo from "../assets/doc.png";
+import excelLogo from "../assets/excel.png";
 
 // Base URL for API calls (update for deployment)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
-
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
 
 const db = getFirestore(getApp());
 
@@ -47,6 +49,24 @@ const MainPage = () => {
   const isMobile = useMobile();
   const { fileId } = useParams();
   const navigate = useNavigate();
+
+  // Function to determine the file logo based on extension
+  const getFileLogo = (filename) => {
+    if (!filename) return pdfLogo; // Fallback to PDF logo
+    const extension = filename.split('.').pop().toLowerCase();
+    switch (extension) {
+      case 'pdf':
+        return pdfLogo;
+      case 'doc':
+      case 'docx':
+        return wordLogo;
+      case 'xls':
+      case 'xlsx':
+        return excelLogo;
+      default:
+        return pdfLogo; // Default to PDF for unknown types
+    }
+  };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -82,7 +102,7 @@ const MainPage = () => {
     } else {
       setIsRestoring(false);
     }
-  }, [currentUser, fileId, navigate]); // Removed isLoadingFile from dependencies
+  }, [currentUser, fileId, navigate]);
 
   useEffect(() => {
     if (chatAreaRef.current) {
@@ -270,17 +290,16 @@ const MainPage = () => {
         text: data.error ? `Error: ${data.error}` : data.response,
         timestamp: new Date().toISOString(),
       };
-      await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), modelMessage);
+      await addDoc(collection(db, "users", new Date().toISOString()), modelMessage);
     } catch (error) {
       console.error("Query error:", error);
       let errorText = "Error: Failed to connect to server.";
       if (error.message.includes("DeepSeek API error")) {
-        // eslint-disable-next-line no-unused-vars
         errorText = "Error: API request limit reached or server issue. Please try again later.";
       }
       const errorMessage = {
         type: "model",
-        text: "Error: Failed to connect to server.",
+        text: errorText,
         timestamp: new Date().toISOString(),
       };
       await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), errorMessage);
@@ -352,27 +371,42 @@ const MainPage = () => {
           >
             <div style={styles.chatContent}>
               <div style={styles.messagesWrapper}>
-                {chatHistory.map((msg) => (
-                  <div
-                    key={msg.id}
-                    style={{
-                      ...(msg.type === "user" ? styles.userMessage : styles.modelMessage),
-                      animation: "slideUp 0.3s ease-out",
-                    }}
-                  >
-                    {msg.type === "model" ? (
-                      <div style={styles.markdown}>
-                        <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.text}</ReactMarkdown>
+                {chatHistory.length === 0 && !isLoading ? (
+                  <div style={styles.fileWelcome}>
+                    <img
+                      src={getFileLogo(activeFile.filename)}
+                      alt={`${activeFile.filename} icon`}
+                      style={styles.fileLogo}
+                    />
+                    <p style={styles.fileMessage}>
+                      "{activeFile.filename}" uploaded, ready for questions!
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    {chatHistory.map((msg) => (
+                      <div
+                        key={msg.id}
+                        style={{
+                          ...(msg.type === "user" ? styles.userMessage : styles.modelMessage),
+                          animation: "slideUp 0.3s ease-out",
+                        }}
+                      >
+                        {msg.type === "model" ? (
+                          <div style={styles.markdown}>
+                            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.text}</ReactMarkdown>
+                          </div>
+                        ) : (
+                          msg.text
+                        )}
                       </div>
-                    ) : (
-                      msg.text
+                    ))}
+                    {isLoading && (
+                      <div style={{ ...styles.loading, animation: "slideUp 0.3s ease-out" }}>
+                        <img src={typingGif} alt="Typing..." style={styles.typingGif} />
+                      </div>
                     )}
-                  </div>
-                ))}
-                {isLoading && (
-                  <div style={{ ...styles.loading, animation: "slideUp 0.3s ease-out" }}>
-                    <img src={typingGif} alt="Typing..." style={styles.typingGif} />
-                  </div>
+                  </>
                 )}
               </div>
             </div>
@@ -419,7 +453,7 @@ const styles = {
     height: "100vh",
     overflowX: "hidden",
     overflowY: "auto",
-    background: "	rgba(24,24,25,255)",
+    background: "rgba(24,24,25,255)",
     boxSizing: "border-box",
   },
   content: {
@@ -474,6 +508,26 @@ const styles = {
     display: "flex",
     flexDirection: "column",
     justifyContent: "flex-end",
+  },
+  fileWelcome: {
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
+    flex: 1,
+    padding: "20px",
+    color: "#fff",
+  },
+  fileLogo: {
+    width: "64px",
+    height: "64px",
+    marginBottom: "15px",
+  },
+  fileMessage: {
+    fontSize: "18px",
+    fontWeight: "500",
+    textAlign: "center",
+    color: "#fff",
   },
   userMessage: {
     background: "rgba(255, 255, 255, 0.1)",
