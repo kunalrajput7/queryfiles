@@ -2,7 +2,16 @@ import React, { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { onAuthStateChanged } from "firebase/auth";
 import { auth } from "../firebaseConfig.jsx";
-import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, getDoc, doc } from "firebase/firestore";
+import {
+  getFirestore,
+  collection,
+  addDoc,
+  onSnapshot,
+  query,
+  orderBy,
+  getDoc,
+  doc,
+} from "firebase/firestore";
 import { getApp } from "firebase/app";
 import ReactMarkdown from "react-markdown";
 import rehypeSanitize from "rehype-sanitize";
@@ -53,15 +62,15 @@ const MainPage = () => {
   // Function to determine the file logo based on extension
   const getFileLogo = (filename) => {
     if (!filename) return pdfLogo; // Fallback to PDF logo
-    const extension = filename.split('.').pop().toLowerCase();
+    const extension = filename.split(".").pop().toLowerCase();
     switch (extension) {
-      case 'pdf':
+      case "pdf":
         return pdfLogo;
-      case 'doc':
-      case 'docx':
+      case "doc":
+      case "docx":
         return wordLogo;
-      case 'xls':
-      case 'xlsx':
+      case "xls":
+      case "xlsx":
         return excelLogo;
       default:
         return pdfLogo; // Default to PDF for unknown types
@@ -81,10 +90,16 @@ const MainPage = () => {
       return;
     }
 
-    if (fileId && lastLoadedFileId.current !== fileId && !pendingNavigation.current) {
+    if (
+      fileId &&
+      lastLoadedFileId.current !== fileId &&
+      !pendingNavigation.current
+    ) {
       const fetchFile = async () => {
         try {
-          const fileDoc = await getDoc(doc(db, "users", currentUser.uid, "files", fileId));
+          const fileDoc = await getDoc(
+            doc(db, "users", currentUser.uid, "files", fileId)
+          );
           if (fileDoc.exists()) {
             const fileData = { id: fileDoc.id, ...fileDoc.data() };
             console.log(`useEffect: Loading file ${fileId}`);
@@ -132,7 +147,14 @@ const MainPage = () => {
       return;
     }
 
-    const chatsRef = collection(db, "users", currentUser.uid, "files", activeFile.id, "chats");
+    const chatsRef = collection(
+      db,
+      "users",
+      currentUser.uid,
+      "files",
+      activeFile.id,
+      "chats"
+    );
     const q = query(chatsRef, orderBy("timestamp", "asc"));
     const unsubscribe = onSnapshot(
       q,
@@ -146,7 +168,13 @@ const MainPage = () => {
       },
       (error) => {
         console.error("Error fetching chat history:", error);
-        setChatHistory([{ type: "model", text: "Error loading chat history.", timestamp: new Date().toISOString() }]);
+        setChatHistory([
+          {
+            type: "model",
+            text: "Error loading chat history.",
+            timestamp: new Date().toISOString(),
+          },
+        ]);
         setIsLoading(false);
       }
     );
@@ -172,7 +200,9 @@ const MainPage = () => {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || `Upload failed with status: ${response.status}`);
+        throw new Error(
+          errorData.detail || `Upload failed with status: ${response.status}`
+        );
       }
       const data = await response.json();
       console.log("Upload response:", data);
@@ -180,7 +210,9 @@ const MainPage = () => {
       const uploadedFile = {
         id: data.id,
         filename: data.filename || file.name,
-        upload_date: data.upload_date ? { toDate: () => new Date(data.upload_date) } : { toDate: () => new Date() },
+        upload_date: data.upload_date
+          ? { toDate: () => new Date(data.upload_date) }
+          : { toDate: () => new Date() },
       };
 
       await handleSelectPdf(uploadedFile);
@@ -188,7 +220,11 @@ const MainPage = () => {
       console.error("Upload error:", error);
       setChatHistory((prev) => [
         ...prev,
-        { type: "model", text: `Error uploading file: ${error.message}`, timestamp: new Date().toISOString() },
+        {
+          type: "model",
+          text: `Error uploading file: ${error.message}`,
+          timestamp: new Date().toISOString(),
+        },
       ]);
     } finally {
       setIsUploading(false);
@@ -198,7 +234,9 @@ const MainPage = () => {
   const handleSelectPdf = async (file, shouldNavigate = true) => {
     if (!currentUser?.uid) return;
     if (isLoadingFile || lastLoadedFileId.current === file.id) {
-      console.log(`handleSelectPdf: Skipped for file ${file.id} (already loading or loaded)`);
+      console.log(
+        `handleSelectPdf: Skipped for file ${file.id} (already loading or loaded)`
+      );
       return;
     }
     setIsLoadingFile(true);
@@ -209,7 +247,9 @@ const MainPage = () => {
     try {
       if (shouldNavigate) {
         pendingNavigation.current = file.id; // Set pending navigation
-        console.log(`handleSelectPdf: Setting pending navigation to ${file.id}`);
+        console.log(
+          `handleSelectPdf: Setting pending navigation to ${file.id}`
+        );
       }
       const response = await fetch(`${API_BASE_URL}/load_index`, {
         method: "POST",
@@ -217,7 +257,10 @@ const MainPage = () => {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || `Failed to load index with status: ${response.status}`);
+        throw new Error(
+          errorData.detail ||
+            `Failed to load index with status: ${response.status}`
+        );
       }
       const data = await response.json();
       console.log("Load index response:", data);
@@ -235,7 +278,11 @@ const MainPage = () => {
       console.error("Load index error:", error);
       setChatHistory((prev) => [
         ...prev,
-        { type: "model", text: `Error loading file data: ${error.message}`, timestamp: new Date().toISOString() },
+        {
+          type: "model",
+          text: `Error loading file data: ${error.message}`,
+          timestamp: new Date().toISOString(),
+        },
       ]);
       navigate("/");
     } finally {
@@ -260,12 +307,26 @@ const MainPage = () => {
       timestamp: new Date().toISOString(),
     };
     try {
-      await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), userMessage);
+      await addDoc(
+        collection(
+          db,
+          "users",
+          currentUser.uid,
+          "files",
+          activeFile.id,
+          "chats"
+        ),
+        userMessage
+      );
     } catch (error) {
       console.error("Error saving user message:", error);
       setChatHistory((prev) => [
         ...prev,
-        { type: "model", text: "Error saving message.", timestamp: new Date().toISOString() },
+        {
+          type: "model",
+          text: "Error saving message.",
+          timestamp: new Date().toISOString(),
+        },
       ]);
       return;
     }
@@ -281,7 +342,9 @@ const MainPage = () => {
       });
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.detail || `Query failed with status: ${response.status}`);
+        throw new Error(
+          errorData.detail || `Query failed with status: ${response.status}`
+        );
       }
       const data = await response.json();
 
@@ -290,19 +353,41 @@ const MainPage = () => {
         text: data.error ? `Error: ${data.error}` : data.response,
         timestamp: new Date().toISOString(),
       };
-      await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), modelMessage);
+      await addDoc(
+        collection(
+          db,
+          "users",
+          currentUser.uid,
+          "files",
+          activeFile.id,
+          "chats"
+        ),
+        modelMessage
+      );
     } catch (error) {
       console.error("Query error:", error);
       let errorText = "Error: Failed to connect to server.";
       if (error.message.includes("DeepSeek API error")) {
-        errorText = "Error: API request limit reached or server issue. Please try again later.";
+        // eslint-disable-next-line no-unused-vars
+        errorText =
+          "Error: API request limit reached or server issue. Please try again later.";
       }
       const errorMessage = {
         type: "model",
-        text: errorText,
+        text: "Error: Failed to connect to server.",
         timestamp: new Date().toISOString(),
       };
-      await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), errorMessage);
+      await addDoc(
+        collection(
+          db,
+          "users",
+          currentUser.uid,
+          "files",
+          activeFile.id,
+          "chats"
+        ),
+        errorMessage
+      );
     } finally {
       setIsLoading(false);
     }
@@ -327,18 +412,24 @@ const MainPage = () => {
         onNewChat={handleNewChat}
         activeFile={activeFile}
       />
-      {isMobile && sidebarOpen && <div style={styles.backdrop} onClick={toggleSidebar} />}
+      {isMobile && sidebarOpen && (
+        <div style={styles.backdrop} onClick={toggleSidebar} />
+      )}
 
       <div
         style={{
           ...styles.content,
-          transform: !isMobile && sidebarOpen ? "translateX(50px)" : "translateX(0)",
+          transform:
+            !isMobile && sidebarOpen ? "translateX(50px)" : "translateX(0)",
           transition: "transform 0.3s ease-in-out",
         }}
       >
         {!activeFile && !isUploading && (
           <div style={styles.centerContent}>
-            <UploadSection onOpenSidebar={toggleSidebar} onUploadPdf={handlePdfUpload} />
+            <UploadSection
+              onOpenSidebar={toggleSidebar}
+              onUploadPdf={handlePdfUpload}
+            />
           </div>
         )}
 
@@ -388,13 +479,17 @@ const MainPage = () => {
                       <div
                         key={msg.id}
                         style={{
-                          ...(msg.type === "user" ? styles.userMessage : styles.modelMessage),
+                          ...(msg.type === "user"
+                            ? styles.userMessage
+                            : styles.modelMessage),
                           animation: "slideUp 0.3s ease-out",
                         }}
                       >
                         {msg.type === "model" ? (
                           <div style={styles.markdown}>
-                            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.text}</ReactMarkdown>
+                            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                              {msg.text}
+                            </ReactMarkdown>
                           </div>
                         ) : (
                           msg.text
@@ -402,8 +497,17 @@ const MainPage = () => {
                       </div>
                     ))}
                     {isLoading && (
-                      <div style={{ ...styles.loading, animation: "slideUp 0.3s ease-out" }}>
-                        <img src={typingGif} alt="Typing..." style={styles.typingGif} />
+                      <div
+                        style={{
+                          ...styles.loading,
+                          animation: "slideUp 0.3s ease-out",
+                        }}
+                      >
+                        <img
+                          src={typingGif}
+                          alt="Typing..."
+                          style={styles.typingGif}
+                        />
                       </div>
                     )}
                   </>
