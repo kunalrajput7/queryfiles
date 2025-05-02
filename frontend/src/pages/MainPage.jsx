@@ -290,7 +290,7 @@ const MainPage = () => {
         text: data.error ? `Error: ${data.error}` : data.response,
         timestamp: new Date().toISOString(),
       };
-      await addDoc(collection(db, "users", new Date().toISOString()), modelMessage);
+      await addDoc(collection(db, "users", currentUser.uid, "files", activeFile.id, "chats"), modelMessage);
     } catch (error) {
       console.error("Query error:", error);
       let errorText = "Error: Failed to connect to server.";
