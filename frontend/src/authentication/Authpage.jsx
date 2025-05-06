@@ -130,7 +130,7 @@ const AuthPage = () => {
             <p style={styles.footerTextP}>
               Designed and Developed by{" "}
               <a
-                href="https://www.linkedin.com/in/kunalrajput007/"
+                href="https://www.linkedin.com/in/kunalrajput1/"
                 style={styles.footerLink}
                 target="_blank"
                 rel="noopener noreferrer"
