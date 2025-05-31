@@ -80,6 +80,9 @@ const AuthPage = () => {
           <img src={logo} alt="QueryFiles Logo" style={styles.logo} />
           <h1 style={styles.title}>QUERYFILES</h1>
         </div>
+        <div style={styles.ptag}>
+          <p>Simply upload your documents and talk to them!</p>
+        </div>
         <div style={isMobile ? styles.mobileAuthBox : styles.authBox}>
           <div style={styles.authBoxInner}>
             <div style={styles.tabContainer}>
@@ -238,6 +241,11 @@ const styles = {
     justifyContent: "center",
     width: "100%",
     zIndex: 1,
+  },
+  ptag: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   },
   logo: {
     height: "50px",
