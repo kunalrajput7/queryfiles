@@ -50,18 +50,20 @@ const MainPage = () => {
   const [isUploading, setIsUploading] = useState(false);
   const [isRestoring, setIsRestoring] = useState(true);
   const [isLoadingFile, setIsLoadingFile] = useState(false);
+  const [showUploadMessage, setShowUploadMessage] = useState(false);
+  const [apiError, setApiError] = useState(false); // New state for API errors
   const lastLoadedFileId = useRef(null);
   const [chatInputHeight, setChatInputHeight] = useState(46);
   const chatAreaRef = useRef(null);
   const chatWrapperRef = useRef(null);
-  const pendingNavigation = useRef(null); // Track pending navigation
+  const pendingNavigation = useRef(null);
   const isMobile = useMobile();
   const { fileId } = useParams();
   const navigate = useNavigate();
 
   // Function to determine the file logo based on extension
   const getFileLogo = (filename) => {
-    if (!filename) return pdfLogo; // Fallback to PDF logo
+    if (!filename) return pdfLogo;
     const extension = filename.split(".").pop().toLowerCase();
     switch (extension) {
       case "pdf":
@@ -73,9 +75,22 @@ const MainPage = () => {
       case "xlsx":
         return excelLogo;
       default:
-        return pdfLogo; // Default to PDF for unknown types
+        return pdfLogo;
     }
   };
+
+  // Timer for showing upload message after 5 seconds
+  useEffect(() => {
+    let timer;
+    if (isUploading) {
+      timer = setTimeout(() => {
+        setShowUploadMessage(true);
+      }, 5000);
+    } else {
+      setShowUploadMessage(false);
+    }
+    return () => clearTimeout(timer);
+  }, [isUploading]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -188,6 +203,7 @@ const MainPage = () => {
 
   const handlePdfUpload = async (file) => {
     setIsUploading(true);
+    setApiError(false); // Clear any previous API error
     const formData = new FormData();
     formData.append("file", file);
     if (currentUser?.uid) {
@@ -218,14 +234,7 @@ const MainPage = () => {
       await handleSelectPdf(uploadedFile);
     } catch (error) {
       console.error("Upload error:", error);
-      setChatHistory((prev) => [
-        ...prev,
-        {
-          type: "model",
-          text: `Error uploading file: ${error.message}`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      setApiError(true); // Show API error message
     } finally {
       setIsUploading(false);
     }
@@ -240,13 +249,14 @@ const MainPage = () => {
       return;
     }
     setIsLoadingFile(true);
+    setApiError(false); // Clear any previous API error
     console.log(`handleSelectPdf: Loading file ${file.id}`);
     const formData = new FormData();
     formData.append("uid", currentUser.uid);
     formData.append("fileid", file.id);
     try {
       if (shouldNavigate) {
-        pendingNavigation.current = file.id; // Set pending navigation
+        pendingNavigation.current = file.id;
         console.log(
           `handleSelectPdf: Setting pending navigation to ${file.id}`
         );
@@ -276,18 +286,11 @@ const MainPage = () => {
       }
     } catch (error) {
       console.error("Load index error:", error);
-      setChatHistory((prev) => [
-        ...prev,
-        {
-          type: "model",
-          text: `Error loading file data: ${error.message}`,
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      setApiError(true); // Show API error message
       navigate("/");
     } finally {
       setIsLoadingFile(false);
-      pendingNavigation.current = null; // Clear pending navigation
+      pendingNavigation.current = null;
       setIsRestoring(false);
     }
   };
@@ -295,6 +298,7 @@ const MainPage = () => {
   const handleNewChat = () => {
     setActiveFile(null);
     lastLoadedFileId.current = null;
+    setApiError(false); // Clear any API error
     navigate("/");
   };
 
@@ -320,18 +324,12 @@ const MainPage = () => {
       );
     } catch (error) {
       console.error("Error saving user message:", error);
-      setChatHistory((prev) => [
-        ...prev,
-        {
-          type: "model",
-          text: "Error saving message.",
-          timestamp: new Date().toISOString(),
-        },
-      ]);
+      setApiError(true); // Show API error message
       return;
     }
 
     setIsLoading(true);
+    setApiError(false); // Clear any previous API error
     try {
       const formData = new FormData();
       formData.append("query", message);
@@ -366,28 +364,7 @@ const MainPage = () => {
       );
     } catch (error) {
       console.error("Query error:", error);
-      let errorText = "Error: Failed to connect to server.";
-      if (error.message.includes("DeepSeek API error")) {
-        // eslint-disable-next-line no-unused-vars
-        errorText =
-          "Error: API request limit reached or server issue. Please try again later.";
-      }
-      const errorMessage = {
-        type: "model",
-        text: "Error: Failed to connect to server.",
-        timestamp: new Date().toISOString(),
-      };
-      await addDoc(
-        collection(
-          db,
-          "users",
-          currentUser.uid,
-          "files",
-          activeFile.id,
-          "chats"
-        ),
-        errorMessage
-      );
+      setApiError(true); // Show API error message
     } finally {
       setIsLoading(false);
     }
@@ -397,6 +374,16 @@ const MainPage = () => {
     return (
       <div style={styles.centerContent}>
         <img src={loadingGif} alt="Loading..." style={styles.loadingGif} />
+      </div>
+    );
+  }
+
+  if (apiError) {
+    return (
+      <div style={styles.centerContent}>
+        <p style={styles.apiErrorMessage}>
+          Too much of traffic on the website. Please try again later.
+        </p>
       </div>
     );
   }
@@ -436,6 +423,11 @@ const MainPage = () => {
         {!activeFile && isUploading && (
           <div style={styles.centerContent}>
             <img src={loadingGif} alt="Loading..." style={styles.loadingGif} />
+            {showUploadMessage && (
+              <p style={styles.uploadMessage}>
+                Too much of traffic, waiting on to it! Hold tight.
+              </p>
+            )}
           </div>
         )}
 
@@ -444,7 +436,7 @@ const MainPage = () => {
             style={{
               ...styles.chatArea,
               top: isMobile ? "60px" : "0",
-              bottom: `${chatInputHeight + 20}px`,
+              bottom: `${chatInputHeight}px`,
               scrollbarWidth: "thin",
               scrollbarColor: "rgba(255, 255, 255, 0.1) transparent",
               "::-webkit-scrollbar": {
@@ -463,7 +455,7 @@ const MainPage = () => {
             <div style={styles.chatContent}>
               <div style={styles.messagesWrapper}>
                 {chatHistory.length === 0 && !isLoading ? (
-                  <div style={styles.fileWelcome}>
+                  <div style={styles.docWelcome}>
                     <img
                       src={getFileLogo(activeFile.filename)}
                       alt={`${activeFile.filename} icon`}
@@ -475,24 +467,24 @@ const MainPage = () => {
                   </div>
                 ) : (
                   <>
-                    {chatHistory.map((msg) => (
+                    {chatHistory.map((chunk) => (
                       <div
-                        key={msg.id}
+                        key={chunk.id}
                         style={{
-                          ...(msg.type === "user"
+                          ...(chunk.type === "user"
                             ? styles.userMessage
-                            : styles.modelMessage),
+                            : styles.messageModel),
                           animation: "slideUp 0.3s ease-out",
                         }}
                       >
-                        {msg.type === "model" ? (
-                          <div style={styles.markdown}>
+                        {chunk.type === "model" ? (
+                          <div style={styles.markdownChunk}>
                             <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
-                              {msg.text}
+                              {chunk.text}
                             </ReactMarkdown>
                           </div>
                         ) : (
-                          msg.text
+                          chunk.text
                         )}
                       </div>
                     ))}
@@ -575,6 +567,7 @@ const styles = {
     width: "90%",
     maxWidth: "800px",
     display: "flex",
+    flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     boxSizing: "border-box",
@@ -613,7 +606,7 @@ const styles = {
     flexDirection: "column",
     justifyContent: "flex-end",
   },
-  fileWelcome: {
+  docWelcome: {
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
@@ -645,7 +638,7 @@ const styles = {
     clear: "both",
     boxSizing: "border-box",
   },
-  modelMessage: {
+  messageModel: {
     padding: "10px",
     margin: "5px 0 5px 0px",
     marginBottom: "25px",
@@ -654,7 +647,7 @@ const styles = {
     clear: "both",
     boxSizing: "border-box",
   },
-  markdown: {
+  markdownChunk: {
     color: "#fff",
     lineHeight: "1.5",
     "& h1, & h2, & h3": {
@@ -719,6 +712,20 @@ const styles = {
     height: "50px",
     padding: "0px",
     margin: "0px",
+  },
+  uploadMessage: {
+    color: "#fff",
+    fontSize: "16px",
+    fontWeight: "400",
+    textAlign: "center",
+    marginTop: "10px",
+  },
+  apiErrorMessage: {
+    color: "#fff",
+    fontSize: "18px",
+    fontWeight: "500",
+    textAlign: "center",
+    padding: "20px",
   },
   backdrop: {
     position: "absolute",
