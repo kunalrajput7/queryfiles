@@ -108,79 +108,48 @@ This project demonstrates an end-to-end, production-ready pipeline for **chat-ba
 
 ---
 
+
 ## 🗺️ Architecture & Flow
 
 ### System Architecture
 
 ```mermaid
 flowchart LR
-    subgraph Client
-      U[User Browser]
-    end
+  %% --- Client ---
+  subgraph Client
+    U[User Browser]
+  end
 
-    subgraph Frontend[Vercel]
-      FE[Next.js (React)]
-      FB[Firebase Auth]
-    end
+  %% --- Frontend ---
+  subgraph Frontend["Frontend (Vercel)"]
+    FE[Next.js (React)]
+    FB[Firebase Auth]
+  end
 
-    subgraph Backend[Google Cloud VM (T4 GPU)]
-      NGINX[Nginx Reverse Proxy]
-      API[FastAPI (Docker)]
-      OCR[PDF & OCR: PyPDF2 / unstructured]
-      EMB[Sentence Transformers]
-      IDX[FAISS Vector Index]
-      LLM[Mistral-7B (via LangChain)]
-    end
+  %% --- Backend ---
+  subgraph Backend["Backend (GCP VM • T4 GPU)"]
+    NGINX[Nginx Reverse Proxy]
+    API[FastAPI (Docker)]
+    OCR[PDF & OCR: PyPDF2 / unstructured]
+    EMB[Sentence Transformers]
+    IDX[FAISS Vector Index]
+    LLM[Mistral-7B (via LangChain)]
+  end
 
-    subgraph Storage[Google Cloud]
-      GCS[Google Cloud Storage (PDFs / Chunks)]
-    end
+  %% --- Storage ---
+  subgraph Storage["Google Cloud Storage (GCS)"]
+    GCS[PDFs / Chunk Store]
+  end
 
-    U --> FE
-    FE --> FB
-    FE <-->|JWT/Session| FB
+  %% --- Flows ---
+  U --> FE
+  FE --> FB
+  FE <-->|JWT / Session| FB
 
-    FE -->|Upload PDF / Ask| NGINX --> API
-    API -->|Store / Fetch PDFs & chunks| GCS
-    API -->|Extract text| OCR
-    API -->|Embed chunks| EMB --> IDX
-    API -->|Retrieve top-k vectors| IDX --> API
-    API -->|RAG (context + query)| LLM --> API
-    API -->|Stream response (SSE/Web)| FE
-
-    sequenceDiagram
-    autonumber
-    participant User
-    participant FE as Next.js (Frontend)
-    participant FB as Firebase Auth
-    participant N as Nginx
-    participant API as FastAPI (Docker)
-    participant OCR as OCR/Text Extract
-    participant GCS as Google Cloud Storage
-    participant EMB as Sentence Transformers
-    participant IDX as FAISS
-    participant LLM as Mistral-7B (LangChain)
-
-    User->>FE: Open app / Login
-    FE->>FB: Auth (email/password or provider)
-    FB-->>FE: JWT / session token
-
-    User->>FE: Upload PDF (≤ 30MB)
-    FE->>N: POST /upload (token)
-    N->>API: Forward request
-    API->>GCS: Store raw PDF
-    API->>OCR: Extract text (incl. scanned OCR)
-    OCR-->>API: Plain text
-    API->>EMB: Create embeddings
-    EMB-->>API: Vectors
-    API->>IDX: Upsert vectors (index)
-
-    User->>FE: Ask question about PDF
-    FE->>N: POST /ask (token, query)
-    N->>API: Forward request
-    API->>IDX: Vector search (top-k)
-    IDX-->>API: Context chunks
-    API->>LLM: RAG prompt (query + context)
-    LLM-->>API: Answer (token stream)
-    API-->>FE: Streamed response (SSE/Web)
-    FE-->>User: Render answer
+  FE -->|Upload PDF / Ask| NGINX --> API
+  API -->|Store / Fetch| GCS
+  API -->|Extract text| OCR
+  API -->|Embed chunks| EMB --> IDX
+  API -->|Retrieve top-k| IDX --> API
+  API -->|RAG (context + query)| LLM --> API
+  API -->|Stream response (SSE / Web)| FE
